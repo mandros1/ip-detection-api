@@ -1,0 +1,19 @@
+{
+  "name": "ip-detection-api",
+  "version": "1.0.0",
+  "description": "Ip and countries IP detection API using user requests",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mandros1/ip-detection-api.git"
+  },
+  "author": "Marin Andros",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mandros1/ip-detection-api/issues"
+  },
+  "homepage": "https://github.com/mandros1/ip-detection-api#readme"
+}

@@ -1,53 +1,53 @@
 import { Request, Response } from "express";
+import Knex from 'knex';
+// import * as Knex from 'knex'
+import {cofiguration} from '../../knex';
 
-const ipLib = require('ip');
-const Netmask = require('netmask').Netmask;
-let block = null;
-
-const getCountry = () => {
-    block = new Netmask('network field goes here');
-};
-
-const contains = (netmask: String, ip: String) => {
-    block = new Netmask(netmask);
-    return block.contains(ip);
-};
+const instance: Knex = Knex(cofiguration as Knex.Config);
 
 
-export const getRequestIp = (req: Request, res: Response) => {
+export const getRequestIp = async (req: Request, res: Response) => {
 
     const reqContentType = req.header('Content-Type');
 
-    const ipCountry = 'Croatia';
-
-    //contains('188.252.128.0/17', '188.252.197.253')
 
     if(reqContentType !== 'text/csv' && reqContentType !== 'application/json') {
         res.status(400).send('Content-Type header not supporting only json and csv')
     } else {
 
-        res.set('Content-Type', reqContentType);
-        const address = req.socket.address();
-        // const ipvFamily = req.socket.address()['family'];
-
-
         const currentIp = req.headers['x-forwarded-for'] ||
             req.connection.remoteAddress ||
             req.socket.remoteAddress ||
             (req.connection ? req.connection.remoteAddress : null);
-        // const ip = ipLib.address();
-        console.log(currentIp);
-        // if(ipLib.isV4Format(currentIp)) console.log('IPV4 format');
-        // if(ipLib.isV6Format(currentIp)) console.log('IPV6 format');
 
+        res.set('Content-Type', reqContentType);
 
-
-        reqContentType === 'text/csv' ?
-            res.send(`ip, country\n${currentIp}, ${ipCountry}`) :
-            res.send({
-                "ip": currentIp,
-                "country": "Croatia"
-            });
+        await instance.
+            raw(`SELECT network, registered_country_geoname_id FROM public.country_blocks_ipv4 WHERE network >> '${currentIp}';`)
+                .then(async (data) => {
+                    if(data.rowCount >= 1){
+                        const geonameId = data.rows[0].registered_country_geoname_id;
+                        await instance.raw(`SELECT country_name from public.country_locations WHERE geoname_id = ${geonameId};`)
+                            .then( countryData => {
+                                if(countryData.rowCount >= 1){
+                                    const countryName = countryData.rows[0].country_name;
+                                    reqContentType === 'text/csv' ?
+                                        res.send(`ip, country\n${currentIp}, ${countryName}`) :
+                                        res.send({
+                                            "ip": currentIp,
+                                            "country": countryName
+                                        });
+                                }
+                            }).catch(err => {
+                                console.log(`Failed miserably with error: ${ err }`);
+                                process.exit(1)
+                            });
+                    }
+                })
+                .catch(err => {
+                    console.log(`Failed miserably with error: ${ err }`);
+                    process.exit(1)
+                });
     }
 };
 

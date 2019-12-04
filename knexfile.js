@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { knexSnakeCaseMappers } = require('objection');
 
-module.exports = {
+export const configuration = {
 
   development: {
     migrations: { tableName: 'knex_migrations' },

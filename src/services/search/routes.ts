@@ -6,6 +6,7 @@ export default [
         path: "/hello",
         method: "get",
         handler: async (req: Request, res: Response) => {
+            console.log('Something happened');
             res.send("Hello world!");
         }
     },
@@ -13,7 +14,6 @@ export default [
         path: "/info",
         method: "get",
         handler: async (req: Request, res: Response) => {
-
 
             await getRequestIp(req, res);
 
@@ -34,14 +34,12 @@ export default [
             //         req.socket.remoteAddress ||
             //         (req.connection ? req.connection.remoteAddress : null);
             //     // const ip = ipLib.address();
-            //     console.log(currentIp);
-            //     if(ipLib.isV4Format(currentIp)) console.log('IPV4 format');
-            //     if(ipLib.isV6Format(currentIp)) console.log('IPV6 format');
+            //     console.log('Please work m');
             //
             //
             //
             //     reqContentType === 'text/csv' ?
-            //         res.send(`ip, country\n${currentIp}, ${ipCountry}`) :
+            //         res.send(`ip, country\n${currentIp}, Croatia`) :
             //         res.send({
             //             "ip": currentIp,
             //             "country": "Croatia"

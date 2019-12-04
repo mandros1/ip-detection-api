@@ -28,5 +28,5 @@ const server = http.createServer(router);
 
 server.listen(API_PORT, () => {
     // @ts-ignore
-    console.log(`Server is running on ${server.address().address}:${server.address().port}`)
+    console.log(`Server is running on localhost:${server.address().port}`)
 });

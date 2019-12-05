@@ -31,20 +31,13 @@ This is a REST API which has a single
 4. After the installation is done we need to run migrations and seeds to create data in the database
     
     First we migrate
-           
-        knex migrate:latest
-        
-    or run the created npm script
     
         npm run db:migrate
     
     Secondly we run seeds to populate the tables
     
-        knex seed:run
-    
-    or run the created npm script
-    
         npm run db:seed
+       
         
 5. Now that we have our data inside our tables we need to build app to transpile the typescript code 
 

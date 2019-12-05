@@ -1,9 +1,8 @@
 require('dotenv').config();
 const { knexSnakeCaseMappers } = require('objection');
 
-export const configuration = {
+module.exports = {
 
-  development: {
     migrations: { tableName: 'knex_migrations' },
     seeds: { tableName: './seeds' },
     client: 'postgres',
@@ -15,14 +14,5 @@ export const configuration = {
       password: process.env.DB_PASSWORD
     },
     ...knexSnakeCaseMappers()
-  },
-
-  staging: {
-    // To be defined
-  },
-
-  production: {
-    // To be defined
-  }
 
 };

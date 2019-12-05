@@ -5,6 +5,7 @@ import http from 'http';
 import express from 'express';
 
 import { applyMiddleware, applyRoutes } from './utils';
+import { isBlacklisted } from './ip/ipManager';
 import middleware from './middleware'
 import routes from "./services/index";
 
@@ -17,7 +18,12 @@ process.on("unhandledRejection", e => {
     process.exit(1);
 });
 
+
 const router = express();
+
+router.use( async function(req, res, next) {
+    await isBlacklisted(req, res, next);
+});
 applyMiddleware(middleware, router);
 applyRoutes(routes, router);
 

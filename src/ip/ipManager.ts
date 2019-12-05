@@ -3,14 +3,17 @@ import Knex from 'knex';
 import {cofiguration} from '../knex';
 
 const knex: Knex = Knex(cofiguration as Knex.Config);
-const isIPLib = require('is-ip');
+const IsIp = require('is-ip');
+const reqIp = require('request-ip');
 
 
 /**
- *
- * @param req
- * @param res
- * @param next
+ * Checks if the provided IP is inside the blacklist table
+ *  true - client is forbidden to access the app and given back 403
+ *  false - called next() and client is allowed in the application
+ * @param req http request object
+ * @param res http response object
+ * @param next function skips the execution of this route, allowing client to proceed to the wanted route
  */
 // @ts-ignore
 export const isBlacklisted = async (req: Request, res: Response, next) => {
@@ -30,10 +33,85 @@ export const isBlacklisted = async (req: Request, res: Response, next) => {
         })
 };
 
+
 /**
- *
- * @param req
- * @param res
+ * Queries the name of the country found under the provided countryId
+ * @param req http request object
+ * @param res http response object
+ * @param countryId is the geoname_id parameter found in either ipv4 or ipv6 table
+ * @param reqContentType is the wanted Content-Type header (text/csv or application/json)
+ * @param currentIp is the IP of the client request
+ */
+const countryOfOrigin = async (req: Request, res: Response, countryId: number, reqContentType: string, currentIp: string) => {
+    await knex.raw(`SELECT country_name from public.country_locations WHERE geoname_id = ?;`, [countryId])
+        .then(countryData => {
+            if(countryData.rowCount > 0){
+                const countryName = countryData.rows[0].country_name;
+                reqContentType === 'text/csv' ?
+                    res.status(200).send(`ip, country\n${currentIp}, ${countryName}`) :
+                    res.status(200).send({
+                        "ip": currentIp,
+                        "country": countryName
+                    });
+            } else res.status(200).send(`There is no country in the database to which the provided ip (${currentIp}) belongs to.`);
+        })
+        .catch(err => {
+            console.error(`Error has occurred: ${err}`);
+            res.status(500).send(`Error has occurred while querying the location data`);
+        });
+};
+
+
+/**
+ * Queries the geoname_id of the provided client IPv4 by seeing in which cidr range it can fit
+ *  Calls countryOfOrigin on successful data
+ * @param req http request object
+ * @param res http response object
+ * @param reqContentType is the wanted Content-Type header (text/csv or application/json)
+ * @param currentIp is the IP of the client request
+ */
+const handleIPv4Address = async (req: Request, res: Response, currentIp: string, reqContentType: string) => {
+    await knex.raw(`SELECT network, registered_country_geoname_id FROM public.country_blocks_ipv4 WHERE network >> ?;`, [String(currentIp)])
+        .then( async (ipData) => {
+            if(ipData.rowCount > 0){
+                const countryId = ipData.rows[0].registered_country_geoname_id;
+                await countryOfOrigin(req, res, countryId, reqContentType, currentIp);
+            } else res.status(200).send(`There is no CIDR IP address in the database to which the provided ip (${currentIp}) belongs to.`);
+        })
+        .catch(err => {
+            console.error(`Error has occurred: ${err}`);
+            res.status(500).send(`Error has occurred while querying the network data`);
+        });
+};
+
+
+/**
+ * Queries the geoname_id of the provided client IPv6 by seeing in which cidr range it can fit
+ *  Calls countryOfOrigin on successful data
+ * @param req http request object
+ * @param res http response object
+ * @param reqContentType is the wanted Content-Type header (text/csv or application/json)
+ * @param currentIp is the IP of the client request
+ */
+const handleIPv6Address = async (req: Request, res: Response, currentIp: string, reqContentType: string) => {
+    await knex.raw(`SELECT network, registered_country_geoname_id FROM public.country_blocks_ipv6 WHERE network >> ?;`, [String(currentIp)])
+        .then( async (ipv6Data) => {
+            if(ipv6Data.rowCount > 0){
+                const countryId = ipv6Data.rows[0].registered_country_geoname_id;
+                await countryOfOrigin(req, res, countryId, reqContentType, currentIp);
+            } else res.status(200).send(`There is no CIDR IP address in the database to which the provided ip (${currentIp}) belongs to.`);
+        })
+        .catch(err => {
+            console.error(`Error has occurred: ${err}`);
+            res.status(500).send(`Error has occurred while querying the network data`);
+        });
+};
+
+/**
+ * Gets the provided request header content-type, which in this version of code has to be 'text/csv' or 'application/json', and client IP address
+ *  According to the version of IP address (IPv4 or IPv6) it calls appropriate method
+ * @param req http request object
+ * @param res http response object
  */
 export const getRequestIp = async (req: Request, res: Response) => {
 
@@ -41,42 +119,18 @@ export const getRequestIp = async (req: Request, res: Response) => {
 
     if(reqContentType === 'text/csv' || reqContentType === 'application/json') {
 
-
-        const currentIp = req.headers['x-forwarded-for'] ||
-            req.connection.remoteAddress ||
-            req.socket.remoteAddress ||
-            (req.connection ? req.connection.remoteAddress : null);
+        const currentIp = String(req.headers['x-forwarded-for']) || reqIp.getClientIp(req);
 
         res.set('Content-Type', reqContentType);
 
-        await knex.raw(`SELECT network, registered_country_geoname_id FROM public.country_blocks_ipv4 WHERE network >> ?;`, [String(currentIp)])
-            .then( async (ipData) => {
-                if(ipData.rowCount > 0){
-                    const countryId = ipData.rows[0].registered_country_geoname_id;
-                    await knex.raw(`SELECT country_name from public.country_locations WHERE geoname_id = ?;`, [countryId])
-                        .then(countryData => {
-                            if(countryData.rowCount > 0){
-                                const countryName = countryData.rows[0].country_name;
-                                reqContentType === 'text/csv' ?
-                                    res.status(200).send(`ip, country\n${currentIp}, ${countryName}`) :
-                                    res.status(200).send({
-                                        "ip": currentIp,
-                                        "country": countryName
-                                    });
-                            } else res.status(200).send(`There is no country in the database to which the provided ip (${currentIp}) belongs to.`);
-                        })
-                        .catch(err => {
-                            console.error(`Error has occurred: ${err}`);
-                            res.status(500).send(`Error has occurred while querying the location data`);
-                        });
-                } else res.status(200).send(`There is no CIDR IP address in the database to which the provided ip (${currentIp}) belongs to.`);
-            })
-            .catch(err => {
-                console.error(`Error has occurred: ${err}`);
-                res.status(500).send(`Error has occurred while querying the network data`);
-            });
+        if(IsIp.v4(currentIp)) {
+            await handleIPv4Address(req, res, currentIp, reqContentType);
+        } else if(IsIp.v6(currentIp)) {
+            await handleIPv6Address(req, res, currentIp, reqContentType);
+        } else {
+            res.status(500).send(`IP is neither in correct ipv4 nor ipv6 format, or is unreachable`);
+        }
     }
-    // TODO: uncomment
     else res.status(400).send('Content-Type header supporting only application/json and text/csv')
 };
 

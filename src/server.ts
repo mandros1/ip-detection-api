@@ -9,6 +9,7 @@ import { isBlacklisted } from './ip/ipManager';
 import middleware from './middleware'
 import routes from "./services/index";
 
+
 process.on("uncaughtException", e => {
     console.log(e);
     process.exit(1);
@@ -21,9 +22,14 @@ process.on("unhandledRejection", e => {
 
 const router = express();
 
+/**
+ * Check if the current client IP address is blacklisted
+ */
 router.use( async function(req, res, next) {
     await isBlacklisted(req, res, next);
 });
+
+// Apply middleware and routes
 applyMiddleware(middleware, router);
 applyRoutes(routes, router);
 

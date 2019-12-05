@@ -26,12 +26,11 @@ const router = express();
  * Check if the current client IP address is blacklisted
  */
 router.use( async function(req, res, next) {
-    if(myMap === undefined) {
-        await getBlacklisted(req, res, next);
-    }
+    await getBlacklisted(req, res, next);
     if(myMap !== undefined) {
         await isBlacklisted(req, res, next);
     } else next();
+
 });
 
 // Apply middleware and routes

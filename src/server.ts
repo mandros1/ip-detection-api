@@ -5,7 +5,7 @@ import http from 'http';
 import express from 'express';
 
 import { applyMiddleware, applyRoutes } from './utils';
-import { isBlacklisted } from './ip/ipManager';
+import { getBlacklisted, myMap, isBlacklisted } from './ip/ipManager';
 import middleware from './middleware'
 import routes from "./services/index";
 
@@ -26,7 +26,12 @@ const router = express();
  * Check if the current client IP address is blacklisted
  */
 router.use( async function(req, res, next) {
-    await isBlacklisted(req, res, next);
+    if(myMap === undefined) {
+        await getBlacklisted(req, res, next);
+    }
+    if(myMap !== undefined) {
+        await isBlacklisted(req, res, next);
+    } else next();
 });
 
 // Apply middleware and routes

@@ -6,6 +6,27 @@ const knex: Knex = Knex(cofiguration as Knex.Config);
 const IsIp = require('is-ip');
 const reqIp = require('request-ip');
 
+let ipAddress;
+
+export let myMap: Map<string, boolean>;
+
+
+function add<K,V>(map:Map<K,V>, key:K, value:V){
+    if(map.has(key)){
+        throw new TypeError("Key "+ key +" already exists!");
+    }else{
+        map.set(key,value);
+    }
+}
+
+
+// @ts-ignore
+export const isBlacklisted = async (req: Request, res: Response, next) => {
+    ipAddress = String(req.headers['x-forwarded-for']) || reqIp.getClientIp(req);
+    if(myMap.has(ipAddress)) res.status(403).send('403 Forbidden');
+    else next();
+};
+
 
 /**
  * Checks if the provided IP is inside the blacklist table
@@ -16,16 +37,16 @@ const reqIp = require('request-ip');
  * @param next function skips the execution of this route, allowing client to proceed to the wanted route
  */
 // @ts-ignore
-export const isBlacklisted = async (req: Request, res: Response, next) => {
-    const address = req.headers['x-forwarded-for'] ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        (req.connection ? req.connection.remoteAddress : null);
-    await knex.raw(`SELECT * FROM public.blacklist_users WHERE network_ip = ?;`, [String(address)])
+export const getBlacklisted = async (req: Request, res: Response, next) => {
+    // ipAddress = String(req.headers['x-forwarded-for']) || reqIp.getClientIp(req);
+    await knex.raw(`SELECT network_ip FROM public.blacklist_users;`)
         .then( (blacklistData) => {
             if(blacklistData.rowCount > 0){
-                res.status(403).send('403 Forbidden');
-            } else next();
+                myMap = new Map<string, boolean>();
+                (blacklistData.rows).forEach((row: { network_ip: any; }) => {
+                    add(myMap, row.network_ip, true);
+                })
+            }
         })
         .catch( err => {
             console.error(`Error has occurred: ${err}`);
@@ -119,14 +140,14 @@ export const getRequestIp = async (req: Request, res: Response) => {
 
     if(reqContentType === 'text/csv' || reqContentType === 'application/json') {
 
-        const currentIp = String(req.headers['x-forwarded-for']) || reqIp.getClientIp(req);
+        ipAddress = String(req.headers['x-forwarded-for']) || reqIp.getClientIp(req);
 
         res.set('Content-Type', reqContentType);
 
-        if(IsIp.v4(currentIp)) {
-            await handleIPv4Address(req, res, currentIp, reqContentType);
-        } else if(IsIp.v6(currentIp)) {
-            await handleIPv6Address(req, res, currentIp, reqContentType);
+        if(IsIp.v4(ipAddress)) {
+            await handleIPv4Address(req, res, ipAddress, reqContentType);
+        } else if(IsIp.v6(ipAddress)) {
+            await handleIPv6Address(req, res, ipAddress, reqContentType);
         } else {
             res.status(500).send(`IP is neither in correct ipv4 nor ipv6 format, or is unreachable`);
         }

@@ -46,7 +46,11 @@ This is a REST API which has a single
     
         npm run db:seed
         
-5. Now that we have our data inside our tables we can start the application by running 
+5. Now that we have our data inside our tables we need to build app to transpile the typescript code 
+
+        npm run build
+        
+5. Finally start the application by running 
 
         npm start
         

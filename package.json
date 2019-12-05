@@ -5,10 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "\"node ./dist/server.js\"",
     "dev": "tsc-watch --onSuccess \"node ./dist/server.js\"",
     "build": "tsc",
     "db:migrate": "knex migrate:latest",
-    "db:rollback": "knex migrate:rollback"
+    "db:rollback": "knex migrate:rollback",
+    "db:seed": "knex seed:run"
   },
   "repository": {
     "type": "git",

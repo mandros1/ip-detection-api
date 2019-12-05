@@ -41,8 +41,8 @@ export const getBlacklisted = async (req: Request, res: Response, next) => {
     // ipAddress = String(req.headers['x-forwarded-for']) || reqIp.getClientIp(req);
     await knex.raw(`SELECT network_ip FROM public.blacklist_users;`)
         .then( (blacklistData) => {
+            myMap = new Map<string, boolean>();
             if(blacklistData.rowCount > 0){
-                myMap = new Map<string, boolean>();
                 (blacklistData.rows).forEach((row: { network_ip: any; }) => {
                     add(myMap, row.network_ip, true);
                 })

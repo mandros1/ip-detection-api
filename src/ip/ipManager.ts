@@ -3,6 +3,7 @@ import Knex from 'knex';
 import {cofiguration} from '../knex';
 
 const knex: Knex = Knex(cofiguration as Knex.Config);
+const isIPLib = require('is-ip');
 
 
 /**
@@ -38,9 +39,8 @@ export const getRequestIp = async (req: Request, res: Response) => {
 
     const reqContentType = req.header('Content-Type');
 
-    if(reqContentType !== 'text/csv' && reqContentType !== 'application/json') {
-        res.status(400).send('Content-Type header supporting only application/json and text/csv')
-    } else {
+    if(reqContentType === 'text/csv' || reqContentType === 'application/json') {
+
 
         const currentIp = req.headers['x-forwarded-for'] ||
             req.connection.remoteAddress ||
@@ -55,15 +55,15 @@ export const getRequestIp = async (req: Request, res: Response) => {
                     const countryId = ipData.rows[0].registered_country_geoname_id;
                     await knex.raw(`SELECT country_name from public.country_locations WHERE geoname_id = ?;`, [countryId])
                         .then(countryData => {
-                           if(countryData.rowCount > 0){
-                               const countryName = countryData.rows[0].country_name;
-                               reqContentType === 'text/csv' ?
-                                   res.status(200).send(`ip, country\n${currentIp}, ${countryName}`) :
-                                   res.status(200).send({
-                                       "ip": currentIp,
-                                       "country": countryName
-                                   });
-                           } else res.status(200).send(`There is no country in the database to which the provided ip (${currentIp}) belongs to.`);
+                            if(countryData.rowCount > 0){
+                                const countryName = countryData.rows[0].country_name;
+                                reqContentType === 'text/csv' ?
+                                    res.status(200).send(`ip, country\n${currentIp}, ${countryName}`) :
+                                    res.status(200).send({
+                                        "ip": currentIp,
+                                        "country": countryName
+                                    });
+                            } else res.status(200).send(`There is no country in the database to which the provided ip (${currentIp}) belongs to.`);
                         })
                         .catch(err => {
                             console.error(`Error has occurred: ${err}`);
@@ -76,6 +76,8 @@ export const getRequestIp = async (req: Request, res: Response) => {
                 res.status(500).send(`Error has occurred while querying the network data`);
             });
     }
+    // TODO: uncomment
+    else res.status(400).send('Content-Type header supporting only application/json and text/csv')
 };
 
 

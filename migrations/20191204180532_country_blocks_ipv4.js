@@ -10,8 +10,8 @@ exports.up = function(knex) {
                 IPV4Table.increments();
                 IPV4Table.specificType('network', 'cidr').notNullable();
                 IPV4Table.integer('geonameId');
-                IPV4Table.integer('registeredCountryGeonameId').references('geonameId').inTable('countryLocations');
-                IPV4Table.integer('representedCountryGeonameId').references('geonameId').inTable('countryLocations');
+                IPV4Table.integer('registeredCountryGeonameId').references('geonameId').inTable('countryLocations').onDelete('cascade');;
+                IPV4Table.integer('representedCountryGeonameId').references('geonameId').inTable('countryLocations').onDelete('cascade');;
                 IPV4Table.integer('isAnonymousProxy');
                 IPV4Table.integer('isSatelliteProvider');
             })

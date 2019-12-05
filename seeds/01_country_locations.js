@@ -5,9 +5,10 @@ exports.seed = async function(knex) {
   return await knex('public.country_locations').del()
     .then(async function () {
         const csvPath = path.join(__dirname, '..', 'assets', 'csv-scripts', 'GeoLite2-Country-Locations-en.csv');
-        console.log(csvPath);
-        // const csvPath = __dirname + "/../assets/csv-script/";
-      // Inserts seed entries
+        console.log('Running country_location seed');
+
+        // Inserts seed entries
         await knex.raw(`COPY public.country_locations(geoname_id, locale_code, continent_code, continent_name, country_iso_code, country_name, is_in_european_union) FROM \'${csvPath}\' DELIMITER \',\' CSV HEADER;`);
+        console.log('Country_location seed done');
     });
 };
